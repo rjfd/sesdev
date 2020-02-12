@@ -705,6 +705,14 @@ class Deployment():
         storage_id = 0
         loadbl_id = 0
         storage_id = 0
+
+        # caasp specific logic
+        if self.settings.version == 'caasp4' and self.settings.caasp_deploy_ses:
+            count_workers = len([nr for nr in self.settings.roles if 'worker' in nr])
+            # enforce a minimum of 3 workers
+            for i in range(0, 3 - count_workers):
+                self.settings.roles.append(['worker'])
+
         for node_roles in self.settings.roles:
             for role_type in ["ganesha", "igw", "mds", "mgr", "mon", "rgw", "storage"]:
                 if role_type in node_roles:
