@@ -17,7 +17,7 @@ from .exceptions import DeploymentDoesNotExists, VersionOSNotSupported, VersionQ
                         NoSourcePortForPortForwarding, ServicePortForwardingNotSupported, \
                         DeploymentAlreadyExists, ServiceNotFound, ExclusiveRoles, \
                         RoleNotSupported, CmdException, VagrantSshConfigNoHostName, \
-                        ScpInvalidSourceOrDestination
+                        ScpInvalidSourceOrDestination, SesDevException
 
 
 JINJA_ENV = Environment(loader=PackageLoader('seslib', 'templates'), trim_blocks=True)
@@ -367,6 +367,11 @@ SETTINGS = {
         'help': 'Use `ceph-bootstrap deploy` command to run ceph-salt formula',
         'default': True
     },
+    'no_master_minion': {
+        'type': bool,
+        'help': 'Do not deploy a salt-minion in the salt-master node',
+        'default': False
+    }
 }
 
 
@@ -668,6 +673,11 @@ class Deployment():
                 if role_type in node_roles:
                     self.node_counts[role_type] += 1
 
+            if self.settings.version in ['octopus', 'ses7'] and 'admin' in node_roles \
+                    and self.settings.no_master_minion and len(node_roles) > 1:
+                raise SesDevException("Cannot have any other roles, besides 'admin', when "
+                                      "--no-master-minion option is used")
+
             if 'suma' in node_roles and self.settings.version not in ['octopus']:
                 raise RoleNotSupported('suma', self.settings.version)
 
@@ -821,6 +831,7 @@ class Deployment():
             'ceph_bootstrap_deploy_mgrs': self.settings.ceph_bootstrap_deploy_mgrs,
             'ceph_bootstrap_deploy_osds': self.settings.ceph_bootstrap_deploy_osds,
             'ceph_bootstrap_deploy': self.settings.ceph_bootstrap_deploy,
+            'no_master_minion': self.settings.no_master_minion,
         }
 
         scripts = {}

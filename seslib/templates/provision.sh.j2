@@ -53,7 +53,8 @@ cp /home/vagrant/.ssh/id_rsa* /root/.ssh/
 cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
 hostnamectl set-hostname {{ node.name }}
 
-{% if not suma %}
+
+{% if not suma and (node != admin or not no_master_minion) %}
 zypper -n install salt-minion
 sed -i 's/^#master:.*/master: {{ admin.name }}/g' /etc/salt/minion
 
@@ -86,11 +87,17 @@ while : ; do
 done
 
 {% if node == admin %}
+
+{% set num_nodes = nodes|length %}
+{%if no_master_minion %}
+{% set num_nodes = num_nodes - 1 %}
+{% endif %}
+
 while true; do
   sleep 1
   salt-key -L
   N=`salt-key --out=json -L | jq '.minions_pre | length'`
-  [ "$N" == "{{ nodes|length }}" ] && break
+  [ "$N" == "{{ num_nodes }}" ] && break
 done
 salt-key -Ay
 
@@ -108,7 +115,7 @@ while true ; do
   LOOP_COUNT="$((LOOP_COUNT + 1))"
   set -x
   MINIONS_RESPONDING="$(salt '*' test.ping | grep True | wc --lines)"
-  if [ "$MINIONS_RESPONDING" = "{{ nodes|length }}" ]; then
+  if [ "$MINIONS_RESPONDING" = "{{ num_nodes }}" ]; then
     break
   fi
   set +x

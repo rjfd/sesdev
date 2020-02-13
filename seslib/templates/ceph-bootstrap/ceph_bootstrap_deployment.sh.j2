@@ -22,6 +22,11 @@ zypper -n in ceph-bootstrap-qa
 
 systemctl restart salt-master
 
+{% set num_nodes = nodes|length %}
+{%if no_master_minion %}
+{% set num_nodes = num_nodes - 1 %}
+{% endif %}
+
 # make sure all minions are responding
 set +ex
 LOOP_COUNT="0"
@@ -36,7 +41,7 @@ while true ; do
   LOOP_COUNT="$((LOOP_COUNT + 1))"
   set -x
   MINIONS_RESPONDING="$(salt '*' test.ping | grep True | wc --lines)"
-  if [ "$MINIONS_RESPONDING" = "{{ nodes|length }}" ]; then
+  if [ "$MINIONS_RESPONDING" = "{{ num_nodes }}" ]; then
     break
   fi
   set +x
@@ -53,7 +58,9 @@ exit 0
 {% endif %}
 
 {% for node in nodes %}
+{% if node != admin or not no_master_minion %}
 ceph-bootstrap config /Cluster/Minions add {{ node.fqdn }}
+{% endif %}
 {% if node.has_role('mon') %}
 ceph-bootstrap config /Cluster/Roles/Mon add {{ node.fqdn }}
 {% endif %}
@@ -114,6 +121,6 @@ salt -G 'ceph-salt:member' state.apply ceph-salt
 {%- else -%}
 /usr/share/ceph-bootstrap/
 {%- endif -%}
-qa/health-ok.sh --total-nodes={{ nodes|length }} --nfs-ganesha-nodes={{ ganesha_nodes }} --igw-nodes={{ igw_nodes }} --mds-nodes={{ mds_nodes }} --mgr-nodes={{ mgr_nodes }} --mon-nodes={{ mon_nodes }} --osd-nodes={{ storage_nodes }} --osds={{ total_osds }} --rgw-nodes={{ rgw_nodes }}
+qa/health-ok.sh --total-nodes={{ num_nodes }} --nfs-ganesha-nodes={{ ganesha_nodes }} --igw-nodes={{ igw_nodes }} --mds-nodes={{ mds_nodes }} --mgr-nodes={{ mgr_nodes }} --mon-nodes={{ mon_nodes }} --osd-nodes={{ storage_nodes }} --osds={{ total_osds }} --rgw-nodes={{ rgw_nodes }}
 {%- endif %}
 

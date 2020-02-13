@@ -74,6 +74,8 @@ def ceph_bootstrap_options(func):
         click.option('--deploy-osds', is_flag=True, default=True, help='Deploy Ceph OSDs'),
         click.option('--ceph-bootstrap-deploy/--no-ceph-bootstrap-deploy', default=True,
                      help='Use `ceph-bootstrap deploy` command to run ceph-salt formula'),
+        click.option('--no-master-minion', is_flag=True, default=False,
+                     help='Do not deploy a salt-minion in the salt-master node'),
     ]
     return _decorator_composer(click_options, func)
 
@@ -393,7 +395,8 @@ def _gen_settings_dict(version,
                        deploy_mons=True,
                        deploy_mgrs=True,
                        deploy_osds=True,
-                       ceph_bootstrap_deploy=True):
+                       ceph_bootstrap_deploy=True,
+                       no_master_minion=False):
 
     settings_dict = {}
     if not single_node and roles:
@@ -519,6 +522,9 @@ def _gen_settings_dict(version,
 
     if not ceph_bootstrap_deploy:
         settings_dict['ceph_bootstrap_deploy'] = False
+
+    if no_master_minion:
+        settings_dict['no_master_minion'] = no_master_minion
 
     return settings_dict
 
